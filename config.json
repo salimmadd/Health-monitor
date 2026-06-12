@@ -1,0 +1,96 @@
+{
+  "dashboard": {
+    "title": "Health Monitoring System Dashboard",
+    "autoRefresh": true,
+    "refreshIntervalSeconds": 10,
+    "maxDataPoints": 30,
+    "alertRetentionCount": 50
+  },
+  "thingspeak": {
+    "channelId": "2615850",
+    "apiKey": "4ZH7N92NX20LDZ2R",
+    "uploadIntervalMs": 15000,
+    "dataFields": {
+      "field1": "Heart Rate (BPM)",
+      "field2": "SpO2 (%)",
+      "field3": "Temperature (°C)",
+      "field4": "Humidity (%)",
+      "field5": "Alert Threshold"
+    }
+  },
+  "sensors": {
+    "heartRate": {
+      "field": 1,
+      "unit": "BPM",
+      "min": 40,
+      "max": 180,
+      "normalMin": 60,
+      "normalMax": 100
+    },
+    "spo2": {
+      "field": 2,
+      "unit": "%",
+      "min": 85,
+      "max": 100,
+      "normalMin": 95,
+      "normalMax": 100
+    },
+    "temperature": {
+      "field": 3,
+      "unit": "°C",
+      "min": 0,
+      "max": 50,
+      "normalMin": 36.0,
+      "normalMax": 37.5
+    },
+    "humidity": {
+      "field": 4,
+      "unit": "%",
+      "min": 0,
+      "max": 100,
+      "normalMin": 30,
+      "normalMax": 70
+    },
+    "alertThreshold": {
+      "field": 5,
+      "unit": "Units",
+      "min": 30,
+      "max": 45
+    }
+  },
+  "alerts": {
+    "heartRate": {
+      "criticalLow": 50,
+      "warningLow": 60,
+      "warningHigh": 100,
+      "criticalHigh": 140
+    },
+    "spo2": {
+      "critical": 90,
+      "warning": 95
+    },
+    "temperature": {
+      "criticalLow": 35.5,
+      "warningLow": 35.5,
+      "warningHigh": 37.5,
+      "criticalHigh": 38.5
+    }
+  },
+  "ui": {
+    "colors": {
+      "healthy": "#2ecc71",
+      "warning": "#f39c12",
+      "critical": "#e74c3c",
+      "primary": "#667eea",
+      "secondary": "#764ba2"
+    },
+    "theme": "light",
+    "language": "en"
+  },
+  "notifications": {
+    "soundEnabled": true,
+    "emailEnabled": false,
+    "smsEnabled": false,
+    "pushEnabled": false
+  }
+}

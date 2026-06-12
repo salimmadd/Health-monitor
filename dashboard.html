@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Health Monitor | Modern Dashboard with Live Alerts</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: #0b0f1c;
+      background-image: radial-gradient(circle at 20% 20%, rgba(30, 40, 80, 0.4) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(60, 20, 70, 0.3) 0%, transparent 50%);
+      min-height: 100vh;
+      padding: 1.5rem;
+      color: #e0e4f0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .app-layout {
+      display: flex;
+      max-width: 1600px;
+      width: 100%;
+      gap: 1.8rem;
+      align-items: flex-start;
+    }
+
+    .dashboard-main {
+      flex: 1 1 75%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      min-width: 0;
+    }
+
+    .alert-sidebar {
+      flex: 0 0 300px;
+      background: rgba(18, 22, 38, 0.8);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+      position: sticky;
+      top: 1.5rem;
+    }
+
+    .alert-sidebar h3 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
+      font-size: 1.2rem;
+      color: #e0e4f0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 0.8rem;
+    }
+
+    .alert-list-container {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      padding-right: 0.3rem;
+    }
+
+    .alert-list-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .alert-list-container::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.2);
+      border-radius: 5px;
+    }
+
+    .sidebar-alert-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 1rem;
+      padding: 0.8rem 1rem;
+      border-left: 5px solid;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .sidebar-alert-item .alert-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .sidebar-alert-item .alert-title {
+      font-weight: 600;
+    }
+
+    .sidebar-alert-item .alert-time {
+      font-size: 0.7rem;
+      color: #8b93b0;
+    }
+
+    .dismiss-btn {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0 0.3rem;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .glass-card {
+      background: rgba(18, 22, 38, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 0 20px rgba(255, 255, 255, 0.03);
+      padding: 1.8rem;
+      transition: all 0.2s ease;
+    }
+
+    .header-section {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .title-block h1 {
+      font-size: 2.4rem;
+      font-weight: 600;
+      background: linear-gradient(to right, #c0caf0, #9aa5d0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .title-block .subtitle {
+      color: #8b93b0;
+      font-size: 0.95rem;
+      margin-top: 0.3rem;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.6rem 1.4rem;
+      border-radius: 3rem;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #2ecc71;
+      box-shadow: 0 0 15px #2ecc71;
+    }
+    .live-dot.warning { background: #f39c12; box-shadow: 0 0 15px #f39c12; }
+    .live-dot.critical { background: #e74c3c; box-shadow: 0 0 20px #e74c3c; animation: pulseCritical 0.8s infinite; }
+
+    @keyframes pulseCritical {
+      0% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+      100% { opacity: 0.8; transform: scale(1); }
+    }
+
+    .control-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #d0d6f0;
+      padding: 0.7rem 1.4rem;
+      border-radius: 2.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.25s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn i { font-size: 1rem; }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+
+    .btn-active {
+      background: #2ecc71;
+      border-color: #2ecc71;
+      color: #0b0f1c;
+      font-weight: 600;
+    }
+
+    .refresh-input {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: white;
+      padding: 0.6rem 0.8rem;
+      border-radius: 2rem;
+      width: 70px;
+      text-align: center;
+      margin-left: 0.5rem;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 1.5rem;
+      padding: 1rem 0.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    .metric-icon { font-size: 1.4rem; color: #8b9ad0; }
+    .metric-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8b93b0;
+    }
+    .metric-number {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .badge {
+      padding: 0.2rem 0.7rem;
+      border-radius: 2rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      display: inline-block;
+      width: fit-content;
+    }
+    .badge-normal { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+    .badge-warning { background: rgba(243, 156, 18, 0.2); color: #f39c12; }
+    .badge-critical { background: rgba(231, 76, 60, 0.25); color: #e74c3c; }
+
+    .charts-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.2rem;
+    }
+
+    .chart-box {
+      background: rgba(18, 22, 38, 0.7);
+      backdrop-filter: blur(14px);
+      border-radius: 1.8rem;
+      border: 1px solid rgba(255,255,255,0.05);
+      padding: 1.2rem;
+      height: 280px;
+    }
+
+    .debug-panel {
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 1.5rem;
+      padding: 1rem 1.4rem;
+      color: #a0a8c0;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout { flex-direction: column; }
+      .alert-sidebar { flex: 1 1 auto; max-height: none; position: static; width: 100%; }
+      .charts-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <div class="dashboard-main">
+      <div class="glass-card header-section">
+        <div class="title-block">
+          <h1><i class="fas fa-heartbeat" style="color: #e74c3c;"></i> Health Monitor</h1>
+          <div class="subtitle">Real-time vitals · ThingSpeak channel</div>
+        </div>
+        <div class="status-pill">
+          <span id="statusDot" class="live-dot"></span>
+          <span id="systemStatusText" style="font-weight: 500;">Connected</span>
+          <span style="color: #8b93b0; margin-left: 0.8rem;" id="lastUpdateLabel">just now</span>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding: 1.2rem 1.8rem;">
+        <div class="control-row">
+          <button class="btn" onclick="refreshData()"><i class="fas fa-sync-alt"></i> Refresh</button>
+          <button class="btn" id="aiAnalysisBtn" onclick="getAIAnalysis()"><i class="fas fa-brain"></i> AI Analysis</button>
+          <button class="btn" onclick="clearAlerts()"><i class="fas fa-check-double"></i> Clear</button>
+          <button class="btn btn-active" id="autoRefreshBtn" onclick="toggleAutoRefresh()"><i class="fas fa-clock"></i> Auto ON</button>
+          <label style="display: flex; align-items: center; gap: 0.4rem; color: #ccc; margin-left: auto;">
+            Interval (s) <input type="number" id="refreshInterval" class="refresh-input" value="10" min="5" max="60">
+          </label>
+        </div>
+      </div>
+
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <i class="fas fa-heart metric-icon" style="color: #e74c3c;"></i>
+          <span class="metric-label">Heart Rate</span>
+          <span class="metric-number"><span id="heartRate">--</span> <small style="font-size:0.9rem;">BPM</small></span>
+          <span id="heartRateBadge" class="badge">--</span>
+        </div>
+        <div class="metric-card">
+          <i class="fas fa-lungs metric-icon" style="color: #3498db;"></i>
+          <span class="metric-label">SpO2</span>
+          <span class="metric-number"><span id="spo2">--</span> <small style="font-size:0.9rem;">%</small></span>
+          <span id="spo2Badge" class="badge">--</span>
+        </div>
+        <div class="metric-card">
+          <i class="fas fa-heartbeat metric-icon" style="color: #e74c3c;"></i>
+          <span class="metric-label">Blood Pressure</span>
+          <span class="metric-number"><span id="bloodPressure">--</span> <small style="font-size:0.9rem;">mmHg</small></span>
+          <span id="bpBadge" class="badge">--</span>
+        </div>
+        <div class="metric-card">
+          <i class="fas fa-thermometer-half metric-icon" style="color: #f39c12;"></i>
+          <span class="metric-label">Temperature</span>
+          <span class="metric-number"><span id="temperature">--</span> <small style="font-size:0.9rem;">°C</small></span>
+          <span id="tempBadge" class="badge">--</span>
+        </div>
+        <div class="metric-card">
+          <i class="fas fa-tint metric-icon" style="color: #1abc9c;"></i>
+          <span class="metric-label">Humidity</span>
+          <span class="metric-number"><span id="humidity">--</span> <small style="font-size:0.9rem;">%</small></span>
+          <span id="humidityBadge" class="badge">--</span>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-box"><canvas id="heartRateChart"></canvas></div>
+        <div class="chart-box"><canvas id="spo2Chart"></canvas></div>
+        <div class="chart-box"><canvas id="bloodPressureChart"></canvas></div>
+        <div class="chart-box"><canvas id="tempHumidityChart"></canvas></div>
+      </div>
+
+      <div class="glass-card" style="background: rgba(30,20,50,0.7);">
+        <h3 style="display: flex; gap:0.5rem; margin-bottom:1rem;"><i class="fas fa-robot"></i> AI Health Insights</h3>
+        <div id="aiAnalysisContainer" style="color:#ccc;">Click AI Analysis to generate insights from current vitals.</div>
+      </div>
+
+      <div class="debug-panel">
+        <i class="fas fa-terminal"></i> <strong>Debug</strong> · Points: <span id="debugDataPoints">0</span> · Last fetch: <span id="debugLastFetch">--</span>
+        <span style="margin-left:1rem;">API: <code id="debugApiUrl" style="word-break: break-all;"></code></span>
+      </div>
+    </div>
+
+    <aside class="alert-sidebar">
+      <h3><i class="fas fa-bell"></i> Live Alerts</h3>
+      <div id="sidebarAlertsList" class="alert-list-container">
+        <div style="color: #8b93b0; text-align: center; padding: 1rem;">No alerts yet</div>
+      </div>
+      <button class="btn" style="margin-top: 1rem; justify-content: center;" onclick="clearAlerts()">
+        <i class="fas fa-trash-alt"></i> Dismiss all
+      </button>
+    </aside>
+  </div>
+
+  <script>
+    (function() {
+      const CHANNEL_ID = '3405966';
+      const API_KEY = '4ZH7N92NX20LDZ2R';
+      const READ_API = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json`;
+
+      const state = {
+        autoRefresh: true,
+        refreshInterval: 10000,
+        timer: null,
+        currentData: null,
+        alerts: [],
+        chartData: {
+          heartRate: { labels: [], values: [] },
+          spo2: { labels: [], values: [] },
+          bloodPressure: { labels: [], systolic: [], diastolic: [] },
+          temperature: { labels: [], values: [] },
+          humidity: { labels: [], values: [] }
+        },
+        charts: {},
+        lastFetchTime: null,
+      };
+
+      function createCharts() {
+        const commonOptions = (title, yMin, yMax) => ({
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#b0b8d0' } },
+            title: { display: true, text: title, color: '#d0d6f0' }
+          },
+          scales: {
+            x: { 
+              ticks: { color: '#8b93b0', maxTicksLimit: 6 }, 
+              grid: { color: 'rgba(255,255,255,0.05)' } 
+            },
+            y: { 
+              min: yMin, 
+              max: yMax, 
+              ticks: { color: '#8b93b0' }, 
+              grid: { color: 'rgba(255,255,255,0.08)' } 
+            }
+          }
+        });
+
+        state.charts.heartRate = new Chart(document.getElementById('heartRateChart'), {
+          type: 'line', 
+          data: { 
+            labels: [], 
+            datasets: [{ 
+              label: 'Heart Rate', 
+              data: [], 
+              borderColor: '#e74c3c',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              tension: 0.4,
+              fill: true,
+              pointRadius: 2,
+              pointBackgroundColor: '#e74c3c'
+            }] 
+          },
+          options: commonOptions('Heart Rate (BPM)', 40, 180)
+        });
+
+        state.charts.spo2 = new Chart(document.getElementById('spo2Chart'), {
+          type: 'line', 
+          data: { 
+            labels: [], 
+            datasets: [{ 
+              label: 'SpO2 %', 
+              data: [], 
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              tension: 0.4,
+              fill: true,
+              pointRadius: 2,
+              pointBackgroundColor: '#3498db'
+            }] 
+          },
+          options: commonOptions('Oxygen Saturation', 85, 100)
+        });
+
+        // Blood Pressure Chart (dual line for systolic/diastolic)
+        state.charts.bloodPressure = new Chart(document.getElementById('bloodPressureChart'), {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: 'Systolic',
+                data: [],
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.4,
+                fill: false,
+                pointRadius: 2,
+                pointBackgroundColor: '#e74c3c',
+                borderWidth: 2
+              },
+              {
+                label: 'Diastolic',
+                data: [],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: false,
+                pointRadius: 2,
+                pointBackgroundColor: '#3498db',
+                borderWidth: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#b0b8d0' } },
+              title: { display: true, text: 'Blood Pressure (mmHg)', color: '#d0d6f0' }
+            },
+            scales: {
+              x: { 
+                ticks: { color: '#8b93b0', maxTicksLimit: 6 }, 
+                grid: { color: 'rgba(255,255,255,0.05)' } 
+              },
+              y: { 
+                min: 40, 
+                max: 200, 
+                ticks: { color: '#8b93b0' }, 
+                grid: { color: 'rgba(255,255,255,0.08)' } 
+              }
+            }
+          }
+        });
+
+        state.charts.tempHumidity = new Chart(document.getElementById('tempHumidityChart'), {
+          type: 'line', 
+          data: {
+            labels: [],
+            datasets: [
+              { 
+                label: 'Temperature (°C)', 
+                data: [], 
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                tension: 0.4,
+                fill: false,
+                pointRadius: 2,
+                pointBackgroundColor: '#f39c12',
+                yAxisID: 'y'
+              },
+              { 
+                label: 'Humidity (%)', 
+                data: [], 
+                borderColor: '#1abc9c',
+                backgroundColor: 'rgba(26, 188, 156, 0.1)',
+                tension: 0.4,
+                fill: false,
+                pointRadius: 2,
+                pointBackgroundColor: '#1abc9c',
+                yAxisID: 'y1'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+              legend: { labels: { color: '#b0b8d0' }, position: 'top' },
+              title: { display: true, text: 'Temperature & Humidity', color: '#d0d6f0' }
+            },
+            scales: {
+              x: { 
+                ticks: { color: '#8b93b0', maxTicksLimit: 6 }, 
+                grid: { color: 'rgba(255,255,255,0.05)' } 
+              },
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: { display: true, text: '°C', color: '#f39c12' },
+                ticks: { color: '#f39c12', callback: v => v + '°C' },
+                grid: { color: 'rgba(255,255,255,0.08)' },
+                min: 0, max: 50
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: '%', color: '#1abc9c' },
+                ticks: { color: '#1abc9c', callback: v => v + '%' },
+                grid: { drawOnChartArea: false },
+                min: 0, max: 100
+              }
+            }
+          }
+        });
+      }
+
+      async function fetchData() {
+        try {
+          const url = `${READ_API}?api_key=${API_KEY}&results=40`;
+          document.getElementById('debugApiUrl').textContent = url;
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const json = await response.json();
+          if (json.feeds && json.feeds.length) {
+            processFeeds(json.feeds);
+            state.lastFetchTime = new Date();
+            document.getElementById('debugLastFetch').textContent = state.lastFetchTime.toLocaleTimeString();
+            document.getElementById('systemStatusText').textContent = '✓ Live';
+          }
+        } catch (err) {
+          document.getElementById('systemStatusText').textContent = '⚠️ Connection issue';
+        }
+      }
+
+      function processFeeds(feeds) {
+        // Reset all chart data arrays
+        state.chartData.heartRate.labels = [];
+        state.chartData.heartRate.values = [];
+        state.chartData.spo2.labels = [];
+        state.chartData.spo2.values = [];
+        state.chartData.bloodPressure.labels = [];
+        state.chartData.bloodPressure.systolic = [];
+        state.chartData.bloodPressure.diastolic = [];
+        state.chartData.temperature.labels = [];
+        state.chartData.temperature.values = [];
+        state.chartData.humidity.labels = [];
+        state.chartData.humidity.values = [];
+
+        const recent = feeds.slice(-30);
+        recent.forEach(f => {
+          const hr = parseFloat(f.field1);
+          const spo2 = parseFloat(f.field2);
+          const temp = parseFloat(f.field3);
+          const hum = parseFloat(f.field4);
+          const bpField = f.field5; // Blood pressure stored as "120/80" format
+          
+          if (![hr, spo2, temp, hum].some(isNaN)) {
+            const time = new Date(f.created_at).toLocaleTimeString();
+            
+            state.chartData.heartRate.labels.push(time);
+            state.chartData.heartRate.values.push(hr);
+            
+            state.chartData.spo2.labels.push(time);
+            state.chartData.spo2.values.push(spo2);
+            
+            state.chartData.temperature.labels.push(time);
+            state.chartData.temperature.values.push(temp);
+            
+            state.chartData.humidity.labels.push(time);
+            state.chartData.humidity.values.push(hum);
+            
+            // Parse blood pressure (format: systolic/diastolic)
+            if (bpField && bpField.includes('/')) {
+              const [systolic, diastolic] = bpField.split('/').map(Number);
+              if (!isNaN(systolic) && !isNaN(diastolic)) {
+                state.chartData.bloodPressure.labels.push(time);
+                state.chartData.bloodPressure.systolic.push(systolic);
+                state.chartData.bloodPressure.diastolic.push(diastolic);
+              }
+            } else if (bpField && !isNaN(parseFloat(bpField))) {
+              // If only single value, use as systolic with estimated diastolic
+              const systolic = parseFloat(bpField);
+              const diastolic = Math.round(systolic * 0.67); // Rough estimate
+              state.chartData.bloodPressure.labels.push(time);
+              state.chartData.bloodPressure.systolic.push(systolic);
+              state.chartData.bloodPressure.diastolic.push(diastolic);
+            }
+          }
+        });
+
+        const last = recent[recent.length-1];
+        if (last) updateUI(last);
+        updateCharts();
+        document.getElementById('debugDataPoints').textContent = state.chartData.heartRate.values.length;
+      }
+
+      function updateUI(feed) {
+        const hr = parseFloat(feed.field1) || 0;
+        const spo2 = parseFloat(feed.field2) || 0;
+        const temp = parseFloat(feed.field3) || 0;
+        const hum = parseFloat(feed.field4) || 0;
+        const bpField = feed.field5 || '120/80';
+        
+        state.currentData = { hr, spo2, temp, hum, bp: bpField };
+        
+        document.getElementById('heartRate').textContent = hr;
+        document.getElementById('spo2').textContent = spo2;
+        document.getElementById('temperature').textContent = temp.toFixed(1);
+        document.getElementById('humidity').textContent = hum.toFixed(1);
+        document.getElementById('bloodPressure').textContent = bpField;
+        document.getElementById('lastUpdateLabel').textContent = new Date(feed.created_at).toLocaleString();
+
+        // Heart Rate Status
+        const hrStatus = hr < 60 ? 'warning' : (hr > 100 ? 'warning' : 'normal');
+        setBadge('heartRateBadge', hrStatus, hrStatus === 'normal' ? 'Normal' : 'Warning');
+        
+        // SpO2 Status
+        const spo2Status = spo2 < 90 ? 'critical' : (spo2 < 95 ? 'warning' : 'normal');
+        setBadge('spo2Badge', spo2Status, spo2Status === 'normal' ? 'Normal' : (spo2Status === 'critical' ? 'Critical' : 'Low'));
+        
+        // Blood Pressure Status
+        let systolic = 120;
+        if (bpField.includes('/')) {
+          systolic = parseFloat(bpField.split('/')[0]);
+        } else {
+          systolic = parseFloat(bpField) || 120;
+        }
+        const bpStatus = systolic > 140 ? 'critical' : (systolic > 130 ? 'warning' : 'normal');
+        setBadge('bpBadge', bpStatus, bpStatus === 'normal' ? 'Normal' : (bpStatus === 'critical' ? 'High' : 'Elevated'));
+        
+        // Temperature Status
+        const tempStatus = temp > 38.5 ? 'critical' : (temp > 37.5 ? 'warning' : (temp < 35.5 ? 'critical' : 'normal'));
+        setBadge('tempBadge', tempStatus, tempStatus === 'normal' ? 'Normal' : (tempStatus === 'critical' ? 'Critical' : 'Caution'));
+        
+        // Humidity Status
+        const humStatus = (hum >= 30 && hum <= 70) ? 'normal' : 'warning';
+        setBadge('humidityBadge', humStatus, humStatus === 'normal' ? 'Optimal' : 'Dry/Humid');
+
+        // Overall system status
+        const overall = [hrStatus, spo2Status, bpStatus, tempStatus].includes('critical') ? 'critical' :
+                        [hrStatus, spo2Status, bpStatus, tempStatus].includes('warning') ? 'warning' : 'healthy';
+        const dot = document.getElementById('statusDot');
+        dot.className = 'live-dot' + (overall === 'critical' ? ' critical' : (overall === 'warning' ? ' warning' : ''));
+        
+        checkAlerts(hr, spo2, temp, systolic, bpField);
+      }
+
+      function setBadge(id, status, text) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = 'badge badge-' + (status === 'critical' ? 'critical' : (status === 'warning' ? 'warning' : 'normal'));
+      }
+
+      function updateCharts() {
+        if (state.charts.heartRate) {
+          state.charts.heartRate.data.labels = state.chartData.heartRate.labels;
+          state.charts.heartRate.data.datasets[0].data = state.chartData.heartRate.values;
+          state.charts.heartRate.update();
+        }
+        
+        if (state.charts.spo2) {
+          state.charts.spo2.data.labels = state.chartData.spo2.labels;
+          state.charts.spo2.data.datasets[0].data = state.chartData.spo2.values;
+          state.charts.spo2.update();
+        }
+        
+        if (state.charts.bloodPressure) {
+          state.charts.bloodPressure.data.labels = state.chartData.bloodPressure.labels;
+          state.charts.bloodPressure.data.datasets[0].data = state.chartData.bloodPressure.systolic;
+          state.charts.bloodPressure.data.datasets[1].data = state.chartData.bloodPressure.diastolic;
+          state.charts.bloodPressure.update();
+        }
+        
+        if (state.charts.tempHumidity) {
+          state.charts.tempHumidity.data.labels = state.chartData.temperature.labels;
+          state.charts.tempHumidity.data.datasets[0].data = state.chartData.temperature.values;
+          state.charts.tempHumidity.data.datasets[1].data = state.chartData.humidity.values;
+          state.charts.tempHumidity.update();
+        }
+      }
+
+      function checkAlerts(hr, spo2, temp, systolic, bpField) {
+        if (hr < 60) addAlert('Low Heart Rate', `${hr} BPM`, 'warning');
+        if (hr > 110) addAlert('High Heart Rate', `${hr} BPM`, 'warning');
+        if (spo2 < 90) addAlert('Critical SpO2', `${spo2}%`, 'critical');
+        else if (spo2 < 95) addAlert('Low SpO2', `${spo2}%`, 'warning');
+        if (systolic > 140) addAlert('High Blood Pressure', `${bpField} mmHg`, 'critical');
+        else if (systolic > 130) addAlert('Elevated Blood Pressure', `${bpField} mmHg`, 'warning');
+        if (temp > 38.5) addAlert('High Fever', `${temp.toFixed(1)}°C`, 'critical');
+        else if (temp > 37.5) addAlert('Elevated Temp', `${temp.toFixed(1)}°C`, 'warning');
+      }
+
+      function addAlert(title, msg, severity) {
+        const exists = state.alerts.some(a => a.title === title && (Date.now() - a.time < 20000));
+        if (!exists) {
+          state.alerts.unshift({ title, msg, severity, time: Date.now(), id: Date.now() });
+          if (state.alerts.length > 30) state.alerts.pop();
+        }
+        renderSidebarAlerts();
+      }
+
+      function renderSidebarAlerts() {
+        const container = document.getElementById('sidebarAlertsList');
+        if (!state.alerts.length) {
+          container.innerHTML = '<div style="color:#8b93b0; text-align:center; padding:1rem;">✓ No active alerts</div>';
+          return;
+        }
+        container.innerHTML = state.alerts.map(a => `
+          <div class="sidebar-alert-item" style="border-left-color: ${a.severity === 'critical' ? '#e74c3c' : '#f39c12'}">
+            <div class="alert-content">
+              <span class="alert-title">${a.title}</span>
+              <span>${a.msg}</span>
+              <span class="alert-time">${new Date(a.time).toLocaleTimeString()}</span>
+            </div>
+            <button class="dismiss-btn" onclick="window.dismissAlert(${a.id})"><i class="fas fa-times"></i></button>
+          </div>
+        `).join('');
+      }
+
+      window.dismissAlert = function(id) {
+        state.alerts = state.alerts.filter(a => a.id !== id);
+        renderSidebarAlerts();
+      };
+
+      window.clearAlerts = function() {
+        state.alerts = [];
+        renderSidebarAlerts();
+      };
+
+      window.refreshData = async function() {
+        document.getElementById('systemStatusText').textContent = 'fetching...';
+        await fetchData();
+      };
+
+      window.toggleAutoRefresh = function() {
+        state.autoRefresh = !state.autoRefresh;
+        const btn = document.getElementById('autoRefreshBtn');
+        if (state.autoRefresh) {
+          btn.classList.add('btn-active');
+          btn.innerHTML = '<i class="fas fa-clock"></i> Auto ON';
+          startAutoRefresh();
+        } else {
+          btn.classList.remove('btn-active');
+          btn.innerHTML = '<i class="fas fa-clock"></i> Auto OFF';
+          clearInterval(state.timer);
+        }
+      };
+
+      function startAutoRefresh() {
+        if (state.timer) clearInterval(state.timer);
+        const sec = parseInt(document.getElementById('refreshInterval').value, 10) || 10;
+        state.refreshInterval = sec * 1000;
+        fetchData();
+        state.timer = setInterval(() => { if (state.autoRefresh) fetchData(); }, state.refreshInterval);
+      }
+
+      document.getElementById('refreshInterval').addEventListener('change', () => {
+        if (state.autoRefresh) startAutoRefresh();
+      });
+
+      window.getAIAnalysis = async function() {
+        const btn = document.getElementById('aiAnalysisBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Analyzing...';
+        const container = document.getElementById('aiAnalysisContainer');
+        try {
+          const response = await fetch('http://localhost:3050/api/health-analysis');
+          if (!response.ok) throw new Error('Server offline');
+          const result = await response.json();
+          
+          if (result.success && result.analysis) {
+            const status = result.analysis.status || 'normal';
+            let statusColor = '#2ecc71';
+            let statusIcon = 'fa-check-circle';
+            
+            if (status === 'warning') { statusColor = '#f39c12'; statusIcon = 'fa-exclamation-triangle'; }
+            else if (status === 'critical') { statusColor = '#e74c3c'; statusIcon = 'fa-exclamation-circle'; }
+            
+            const analysis = result.analysis;
+            const recommendationsList = analysis.recommendations 
+              ? analysis.recommendations.map(r => `<li>${r}</li>`).join('')
+              : '<li>No specific recommendations</li>';
+            
+            container.innerHTML = `
+              <div style="color:${statusColor};">
+                <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem; font-weight:600; font-size:1.1rem;">
+                  <i class="fas ${statusIcon}"></i> 
+                  Status: <span style="text-transform:uppercase;">${status}</span>
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <strong style="color:#e0e4f0;">Summary:</strong>
+                  <div style="color:#d0d6f0; margin-top:0.3rem;">${analysis.summary || 'Analysis complete'}</div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <strong style="color:#e0e4f0;">Analysis:</strong>
+                  <div style="color:#d0d6f0; margin-top:0.3rem; font-size:0.95rem; line-height:1.5;">${analysis.analysis || 'No detailed analysis'}</div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                  <strong style="color:#e0e4f0;">Risk Level:</strong>
+                  <span style="color:${statusColor}; font-weight:600; text-transform:uppercase;">${analysis.riskLevel || 'unknown'}</span>
+                </div>
+                <div>
+                  <strong style="color:#e0e4f0;">Recommendations:</strong>
+                  <ul style="margin-top:0.5rem; margin-left:1.5rem; color:#d0d6f0;">${recommendationsList}</ul>
+                </div>
+              </div>
+            `;
+          } else {
+            container.innerHTML = `<div style="color:#e74c3c;"><i class="fas fa-times-circle"></i> Analysis failed.</div>`;
+          }
+        } catch (e) {
+          container.innerHTML = `<div style="color:#f39c12;"><i class="fas fa-exclamation-circle"></i> AI server offline (port 3050)</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-brain"></i> AI Analysis';
+        }
+      };
+
+      window.addEventListener('load', () => {
+        createCharts();
+        startAutoRefresh();
+      });
+    })();
+  </script>
+</body>
+</html>
